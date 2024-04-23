@@ -48,7 +48,7 @@ options(max.print = 1e9)
 # PARAMS
 country <- "MADAGASCAR"
 start_date <- as_date("2021-01-01")
-end_date <- as_date("2023-12-31")
+end_date <- as_date("2024-03-15")
 current_date <- Sys.Date()
 polis_date <- floor_date(Sys.Date(), "week", 1) # Date that data was pulled from POLIS (previous friday)
 local_dr_path <- "C:/Users/XRG9/Desktop/local_dr"
@@ -58,7 +58,7 @@ sg_dr_path <- NULL
 # download from 04/09/2024
 prev_get_all_polio_data <- read_rds(file.path(local_dr_path, str_to_lower(country), 
                                               year(Sys.Date()), "data", "raw.data.rds"))
-ctry.data <- extract_country_data(country, prev_get_all_polio_data)
+ctry.data <- sirfunctions::extract_country_data(country, prev_get_all_polio_data)
 
 #ctry.data <- init_dr(country, start_date, end_date, local_dr_path, sg_dr_path, attach_spatial_data = T)
 
@@ -441,6 +441,9 @@ poppy = poppy[,c(1,4,3,6,7,8,9,10,11,5,2)]
 # LAB Data-----------------------------------------------------------------------------
 # # Read in and deal with lab data --------------
 laba <- read_excel(file.path(here(), str_to_lower(country), year(Sys.Date()), "data", "polio_lab_2019_jan22_2024.xlsx"))
+# updated lab data
+afro.lab.01 <- sirfunctions::edav_io("read", file_loc = "Data/lab/2024-04-05 AFRO Lab Extract (AFP only).csv") %>%
+  filter(!is.na(EPID))
 laba <- laba |>
   filter(ctry.code2==ctry.data$ctry.code)
 #filtering out negative time intervals
@@ -946,8 +949,16 @@ prov.time.2 = left_join(int.data, afp.prov.year.lab, by = c("year" = "year",
                                                             "adm1guid" = "adm1guid",
                                                             "prov" = "prov"))
 
+province_names <- prov.time.2 |>
+  select(prov) |> unique() |> arrange(prov) |>
+  pull(prov)
+province_names_pt1 <- province_names[1:7]
+province_names_pt2 <- province_names[8:14]
+province_names_pt3 <- province_names[15:23]
+
 timely_prov <- ggplot(prov.time.2|>
-                        filter(is.na(medi)==F & is.na(prov)==F))+#med.p3) +
+                        filter(is.na(medi)==F & is.na(prov)==F,
+                               prov %in% province_names_pt3))+#med.p3) +
   geom_bar(aes(x = as.character(labs), y = medi, fill = fct_rev(type)),
            position = "stack", stat = "identity") +
   geom_text(
@@ -971,7 +982,8 @@ timely_prov <- ggplot(prov.time.2|>
   theme(
     legend.position = "bottom",
     legend.background = element_blank()
-  )
+  ) +
+  theme(strip.text.y = element_text(size = 5))
 
 timely_prov
 
@@ -1241,8 +1253,8 @@ pop.map.provn <- ggplot() +
   ) +
   geom_sf(data = prov.shape, color = "black", fill = NA) +
   geom_sf_label_repel(data = shape.prov.pop, 
-                      aes(label = ADM1_NAME)) +
-  scale_fill_distiller(palette = "YlOrRd", direction = 1, 
+                      aes(label = ADM1_NAME), force=80) +
+  scale_fill_distiller(palette = "YlOrRd", direction = "both", 
                        labels = scales::comma) +
   ggtitle(paste0("Province Names - District Level Population - ", year(end_date)))+
   labs(fill = "Under-15 pop") +
@@ -1649,7 +1661,7 @@ prov.2npafp = provnpafp %>%
             len.year = length(year)) %>%
   mutate(labs = paste0(num.meet2, "/", len.year, " (", 
                        round(100*num.meet2/len.year,0), "%)",
-                       " provinces with >= 2 cases of\nNPAFP per 100,000 population"))
+                       " provinces \nwith >= 2 cases of NPAFP \nper 100,000 population"))
 
 
 # Get coordinates for maps that are plotted
@@ -1663,7 +1675,7 @@ npafp.maps <- ggplot() +
   geom_sf(data = prov.shape, color = "black", fill = "lightgrey", size = .5) +
   geom_sf(data = prov.pop.case.npafp, color = "black", aes(fill = cats)) +
   geom_text(data = prov.2npafp, aes(x=min(ctcoord$X), y = min(ctcoord$Y)+adjy,
-                                    label = labs), check_overlap = TRUE,
+                                    label = labs), size=3, check_overlap = TRUE,
             hjust = 0)+
   scale_fill_manual(
     name = "NPAFP rate",
@@ -1736,7 +1748,7 @@ dist.2npafp = distnpafp %>%
   summarize(num.meet2 = sum(meet2, na.rm = T),
             len.year = length(year)) %>%
   mutate(labs = paste0(num.meet2, "/", len.year, " (", round(100*num.meet2/len.year,0), "%)",
-                       " districts with >= 2 cases of\nNPAFP per 100,000 population"))
+                       " districts \nwith >= 2 cases of NPAFP \nper 100,000 population"))
 
 
 # Get coordinates for maps that are plotted
@@ -1752,7 +1764,7 @@ npafp.maps.dist <- ggplot() +
   #geom_sf(data = ctry.data$dist, color = "black", fill = "lightgrey", size = .5) +
   geom_sf(data = dist.pop.case.npafp, color = "black", aes(fill = cats)) +
   geom_text(data = dist.2npafp, aes(x=min(ctcoord$X), y = min(ctcoord$Y)+adjy,
-                                    label = labs), check_overlap = TRUE,
+                                    label = labs), size = 3, check_overlap = TRUE,
             hjust = 0)+
   scale_fill_manual(
     name = "NPAFP rate",
@@ -2454,7 +2466,7 @@ es.data.earlidat <- ctry.data$es %>%
 # Create ES dates ----------------
 # Usually want to display the last calendar year of data OR last rolling year
 # Choose which you want and use to filter
-start_date_es = start_date
+start_date_es = as_date("2023-01-01")
 end_date_es = end_date
 
 # NOTE THAT DATE MAY NEED TO BE MANUALLY ADJUSTED DEPENDING ON ANALYSIS DATES
@@ -2669,9 +2681,10 @@ es.det.map <- ggplot() +
   geom_label_repel(
     data = subset(det.rate, site.name!= "OSHIKANGO TREATMENT PLANT"), aes(
       x = as.numeric(lng), y = as.numeric(lat),
-      label = site.name, color = cats
+      label = site.name, color = cats,
     ), 
-    show.legend = FALSE
+    show.legend = FALSE,
+    force = 100
   ) +
   ggtitle(paste0("ES detection rate by site: ", format(start_date_es, "%B %Y"),
                  " - ", format(end_date_es, "%B %Y")))+
@@ -2777,8 +2790,14 @@ es.tab1
 
 es.tab1 = es.tab1 %>%
   arrange(ADM1_NAME, ADM2_NAME, site.name)
+es_site_names <- es.tab1 |>
+  select(site.name) |> unique() |> pull()
+es_site_names_1 <- es_site_names[1:9]
+es_site_names_2 <- es_site_names[10:19]
+es_site_names_3 <- es_site_names[20:28]
 
 es.table <- es.tab1 %>%
+  filter(site.name %in% es_site_names_3) |>
   flextable(col_keys = c(
     "ADM1_NAME", "ADM2_NAME", "site.name", "early.dat", "num.spec",
     "ev.pct", "condition.pct",
@@ -3249,3 +3268,11 @@ write_xlsx(pot.c.clust2,
            file.path(here(),str_to_lower(country), year(Sys.Date()), "data",
                      paste0("compatible_pot_compatible_cases_",
                      country, ".xlsx")))
+
+
+# saving new changes to the code
+local_dr_path <- file.path(getwd(), "madagascar_04192024.R")
+github_path <- file.path("C:/Users/XRG9/desktop/gitrepos/sg-desk-reviews")
+sirfunctions::upload_dr_to_github(file_path = local_dr_path, sg_dr_path = github_path)
+
+# upload backup of the DR data to EDAV
