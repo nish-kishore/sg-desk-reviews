@@ -297,6 +297,7 @@ dis.case.ind <- full_join(dis.extract, d.p.cases, by = c("adm2guid" = "adm2guid"
   select(-adm1guid, -adm2guid)
 
 ### Province 
+# only 6 provinces extracted here...
 prov.extract <- f.npafp.rate.01(afp.data = ctry.data$afp.all.2, 
                                               pop.data = ctry.data$prov.pop,
                                               start.date = start_date, 
@@ -311,6 +312,7 @@ p.p.cases <- summarize(group_by(ctry.data$afp.all.2 |>
                        num.vdpv1.cases	= sum(vdpv.1  == TRUE,na.rm = T),
                        num.vdpv2.cases	= sum(vdpv.2 == TRUE, na.rm = T),
                        num.vdpv3.cases = sum(vdpv.3  == TRUE, na.rm = T))
+
 
 prov.case.ind = full_join(prov.extract, p.p.cases, by = c("adm1guid" = "adm1guid",
                                                           "year" = "year")) |>
@@ -1592,8 +1594,10 @@ afp.dets.prov.year
 sub.prov.case.ind = prov.case.ind %>%
   select(year, n_npafp, u15pop, prov, npafp_rate)
 
+# only 6 provinces
 sub.pstool = pstool %>%
-  select(year, per.stool.ad, prov)
+  select(year, per.stool.ad, prov) |>
+  filter(!is.na(prov))
 
 sub.prov.join = full_join(sub.prov.case.ind, sub.pstool, by = c("year", "prov")) %>%
   arrange(prov, year)
@@ -1603,7 +1607,8 @@ sub.prov.join = sub.prov.join %>%
   mutate(diff = lag(n_npafp)) %>%
   mutate(diff_per = round(100*(n_npafp - lag(n_npafp))/lag(n_npafp), 1)) %>%
   mutate(across(c(per.stool.ad, diff, diff_per, n_npafp),round, 0)) %>%
-  mutate(across(c(npafp_rate), round, 1))
+  mutate(across(c(npafp_rate), round, 1)) |>
+  filter(!is.na(prov))
 
 sub.prov.join
 
@@ -1868,7 +1873,7 @@ npafp.maps.dist <- ggplot() +
   geom_sf(data = ctry.shape, color = "black", fill = NA, size = 1) +
   geom_sf(data = prov.shape, color = "black", fill = "lightgrey", size = .5) +
   #geom_sf(data = ctry.data$dist, color = "black", fill = "lightgrey", size = .5) +
-  geom_sf(data = dist.pop.case.npafp, color = "black", aes(fill = cats)) +
+  geom_sf(data = dist.pop.case.npafp |> filter(!is.na(prov)), color = "black", aes(fill = cats)) +
   geom_text(data = dist.2npafp, aes(x=min(ctcoord$X), y = min(ctcoord$Y)+adjy,
                                     label = labs), size = 3, check_overlap = TRUE,
             hjust = 0)+
