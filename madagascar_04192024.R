@@ -3269,10 +3269,12 @@ write_xlsx(pot.c.clust2,
                      paste0("compatible_pot_compatible_cases_",
                      country, ".xlsx")))
 
-
-# saving new changes to the code
+#----- Finishing Up
+# attaching laba2 without names of patients
+ctry.data$laba2 <- laba2 |> select(-NamesofPatient)
 local_dr_path <- file.path(getwd(), "madagascar_04192024.R")
 github_path <- file.path("C:/Users/XRG9/desktop/gitrepos/sg-desk-reviews")
-sirfunctions::upload_dr_to_github(file_path = local_dr_path, sg_dr_path = github_path)
-
-# upload backup of the DR data to EDAV
+# Upload backup of the DR data to EDAV
+freeze_dr_data(ctry.data, str_to_lower(country), 2024, "madagascar_04192024")
+# saving new changes to the code
+upload_dr_to_github(local_dr_path, github_path)
