@@ -2797,7 +2797,7 @@ es_site_names_2 <- es_site_names[10:19]
 es_site_names_3 <- es_site_names[20:28]
 
 es.table <- es.tab1 %>%
-  filter(site.name %in% es_site_names_3) |>
+  #filter(site.name %in% es_site_names_3) |>
   flextable(col_keys = c(
     "ADM1_NAME", "ADM2_NAME", "site.name", "early.dat", "num.spec",
     "ev.pct", "condition.pct",
