@@ -3269,6 +3269,8 @@ write_xlsx(pot.c.clust2,
                      paste0("compatible_pot_compatible_cases_",
                      country, ".xlsx")))
 
+# test here
+
 #----- Finishing Up
 # attaching laba2 without names of patients
 ctry.data$laba2 <- laba2 |> select(-NamesofPatient)
