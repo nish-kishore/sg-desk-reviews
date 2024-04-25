@@ -47,7 +47,7 @@ options(max.print = 1e9)
 
 # PARAMS
 country <- "SOMALIA"
-start_date <- as_date("2021-01-01")
+start_date <- as_date("2022-01-01")
 end_date <- as_date("2024-03-15")
 current_date <- Sys.Date()
 polis_date <- floor_date(Sys.Date(), "week", 1) # Date that data was pulled from POLIS (previous friday)
@@ -305,6 +305,7 @@ prov.extract <- f.npafp.rate.01(afp.data = ctry.data$afp.all.2,
                                               spatial.scale = "prov", 
                                               pending = T,
                                               rolling = F)
+
 p.p.cases <- summarize(group_by(ctry.data$afp.all.2 |>
                                   filter(date >= start_date & date <= end_date),
                                 adm1guid, year), afp.case = n(),
@@ -1065,7 +1066,7 @@ province_names_pt3 <- province_names[15:23]
 
 timely_prov <- ggplot(prov.time.2|>
                         filter(is.na(medi)==F & is.na(prov)==F,
-                               prov %in% province_names_pt3))+#med.p3) +
+                               prov %in% province_names))+#med.p3) +
   geom_bar(aes(x = as.character(labs), y = medi, fill = fct_rev(type)),
            position = "stack", stat = "identity") +
   geom_text(
@@ -2903,12 +2904,13 @@ es.tab1 = es.tab1 %>%
   arrange(ADM1_NAME, ADM2_NAME, site.name)
 es_site_names <- es.tab1 |>
   select(site.name) |> unique() |> pull()
-es_site_names_1 <- es_site_names[1:9]
-es_site_names_2 <- es_site_names[10:19]
-es_site_names_3 <- es_site_names[20:28]
+#uncomment and use as necessary to reduce/filter 
+# es_site_names_1 <- es_site_names[1:9]
+# es_site_names_2 <- es_site_names[10:19]
+# es_site_names_3 <- es_site_names[20:28]
 
 es.table <- es.tab1 %>%
-  filter(site.name %in% es_site_names_3) |>
+  filter(site.name %in% es_site_names) |>
   flextable(col_keys = c(
     "ADM1_NAME", "ADM2_NAME", "site.name", "early.dat", "num.spec",
     "ev.pct", "condition.pct",
