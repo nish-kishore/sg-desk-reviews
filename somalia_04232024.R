@@ -1,6 +1,6 @@
 
 # loading branch from sirtools with init_dr. NOTE: this branch is unstable and needs to be 
-# changed once init_dr() is in main
+# changed once init_dr() and other functions in progress are in the main branch
 library(devtools)
 repo <- "nish-kishore/sirfunctions"
 ref <- "59-dr-modularization-data-loading"
@@ -47,22 +47,16 @@ options(max.print = 1e9)
 
 # PARAMS
 country <- "SOMALIA"
-start_date <- as_date("2022-01-01")
+start_date <- as_date("2022-01-01") # NOTE: changes in GUIDS from 2021-2022 so using 2022 as start
 end_date <- as_date("2024-03-15")
 current_date <- Sys.Date()
 polis_date <- floor_date(Sys.Date(), "week", 1) # Date that data was pulled from POLIS (previous friday)
 local_dr_path <- "C:/Users/XRG9/Desktop/local_dr"
 
 # get country data
-# download from 04/09/2024
-#sirfunctions:::set_dr_local_folders(file.path(local_dr_path, str_to_lower(country), year(end_date)))
 prev_get_all_polio_data <- read_rds(file.path(local_dr_path, str_to_lower(country), 
                                               year(Sys.Date()), "data", "raw.data.rds"))
 ctry.data <- sirfunctions::extract_country_data(country, prev_get_all_polio_data)
-#ctry.data <- init_dr(country, start_date, end_date, local_dr_path, sg_dr_path, attach_spatial_data = T)
-
-  
-
 
 # convert date columns from char to date-time and add necessary columns
 ctry.data$afp.all.2 <-ctry.data$afp.all.2 |>
@@ -82,26 +76,26 @@ count(ctry.data$afp.all.2, dist)
 count(ctry.data$afp.all.2, adm2guid)
 
 # FIX
-missy = filter(ctry.data$afp.all.2, is.na(dist))
-missy$epid
+missing_data = filter(ctry.data$afp.all.2, is.na(dist))
+missing_data$epid
 
 # Pull out any geographic info from the epid ----
-missy2 = ctry.data$afp.all.2 %>%
-  filter(epid %in% missy$epid)%>%
+missing_data2 = ctry.data$afp.all.2 %>%
+  filter(epid %in% missing_data$epid)%>%
   mutate(epid.check = substr(epid, 1, 11))
-count(missy2, epid.check)
+count(missing_data2, epid.check)
 
 # Match epid.check with epid and year onset to pull out district and guid ----
-missy2$adm2guid.2=NA
-for(i in 1:nrow(missy2)){
-  x = filter(ctry.data$afp.all.2, year== missy2$year[i] &
-               grepl(missy2$epid.check[i],ctry.data$afp.all.2$epid)==T &
+missing_data2$adm2guid.2=NA
+for(i in 1:nrow(missing_data2)){
+  x = filter(ctry.data$afp.all.2, year== missing_data2$year[i] &
+               grepl(missing_data2$epid.check[i],ctry.data$afp.all.2$epid)==T &
                is.na(adm2guid)==F)
   #print(dim(x))
   if(dim(x)[1]>0 & length(unique(x$adm2guid))==1){
     # print(length(unique(x$adm2guid)))
     # print(x$adm2guid)
-    missy2$adm2guid.2[i]=unique(x$adm2guid)
+    missing_data2$adm2guid.2[i]=unique(x$adm2guid)
   }
   if(dim(x)[1]>0 & length(unique(x$adm2guid))>1){
     print(length(unique(x$adm2guid)))
@@ -110,70 +104,70 @@ for(i in 1:nrow(missy2)){
 }
 
 # back fill to adm2guid
-missy2 = missy2 %>%
+missing_data2 = missing_data2 %>%
   mutate(adm2guid = ifelse(is.na(adm2guid), adm2guid.2, adm2guid))
-count(missy2, adm2guid.2, adm2guid)
+count(missing_data2, adm2guid.2, adm2guid)
 
-missy3 = filter(missy2, is.na(adm2guid))
-for(i in 1:nrow(missy3)){
+missing_data3 = filter(missing_data2, is.na(adm2guid))
+for(i in 1:nrow(missing_data3)){
   x = filter(ctry.data$afp.all.2,
-             grepl(missy3$epid.check[i],ctry.data$afp.all.2$epid)==T &
+             grepl(missing_data3$epid.check[i],ctry.data$afp.all.2$epid)==T &
                is.na(adm2guid)==F)
   #print(dim(x))
   if(dim(x)[1]>0 & length(unique(x$adm2guid))==1){
     # print(length(unique(x$adm2guid)))
     # print(x$adm2guid)
-    missy3$adm2guid.2[i]=unique(x$adm2guid)
+    missing_data3$adm2guid.2[i]=unique(x$adm2guid)
   }
   if(dim(x)[1]>0 & length(unique(x$adm2guid))>1){
     print(length(unique(x$adm2guid)))
     print(unique(x$adm2guid))
     print(unique(x$prov))
-    print(missy3$prov[i])
+    print(missing_data3$prov[i])
   }
 }
 
-# Backfill missy2 with new data ----
-missy2$dist[match(missy3$epid, missy2$epid)] = missy3$dist
-missy2$adm2guid[match(missy3$epid, missy2$epid)] = missy3$adm2guid.2
+# Backfill missing_data2 with new data ----
+missing_data2$dist[match(missing_data3$epid, missing_data2$epid)] = missing_data3$dist
+missing_data2$adm2guid[match(missing_data3$epid, missing_data2$epid)] = missing_data3$adm2guid.2
 
 # For those that have multiple adm2guids ------
 # Match province and take the adm2guid that goes with the province
-missy3 = filter(missy2, is.na(adm2guid))
-for(i in 1:nrow(missy3)){
+missing_data3 = filter(missing_data2, is.na(adm2guid))
+for(i in 1:nrow(missing_data3)){
   x = filter(ctry.data$afp.all.2,
-             grepl(missy3$epid.check[i],ctry.data$afp.all.2$epid)==T &
+             grepl(missing_data3$epid.check[i],ctry.data$afp.all.2$epid)==T &
                is.na(adm2guid)==F)
-  y = filter(x, prov == missy3$prov[i])
+  y = filter(x, prov == missing_data3$prov[i])
   #print(dim(x))
   if(dim(x)[1]>0 & dim(y)[1]>0){
     print(dim(y))
     # print(length(unique(x$adm2guid)))
     # print(x$adm2guid)
-    missy3$adm2guid.2[i]=unique(y$adm2guid)
+    missing_data3$adm2guid.2[i]=unique(y$adm2guid)
   }
 }
 
 
-count(missy2, adm2guid.2, adm2guid)
-count(missy3, adm2guid.2, adm2guid)
-missy2$adm2guid[match(missy3$epid, missy2$epid)] = missy3$adm2guid.2
+count(missing_data2, adm2guid.2, adm2guid)
+count(missing_data3, adm2guid.2, adm2guid)
+missing_data2$adm2guid[match(missing_data3$epid, missing_data2$epid)] = missing_data3$adm2guid.2
 
-count(missy2, adm2guid, dist)
-# add dist in to missy2 ----
-missy2 = missy2 %>%
+count(missing_data2, adm2guid, dist)
+# add dist in to missing_data2 ----
+missing_data2 = missing_data2 %>%
   mutate(dist = case_when(
     is.na(dist) & is.na(adm2guid) == F ~ 
-      ctry.data$afp.all.2$dist[match(missy2$adm2guid,
+      ctry.data$afp.all.2$dist[match(missing_data2$adm2guid,
                                      ctry.data$afp.all.2$adm2guid)],
     T~dist
   ))
 
-count(missy2, adm2guid, dist)
-missy2$epid
+count(missing_data2, adm2guid, dist)
+missing_data2$epid
 # Update dist and adm2guid -----
-ctry.data$afp.all.2$dist[match(missy2$epid, ctry.data$afp.all.2$epid)] = missy2$dist
-ctry.data$afp.all.2$adm2guid[match(missy2$epid, ctry.data$afp.all.2$epid)] = missy2$adm2guid
+ctry.data$afp.all.2$dist[match(missing_data2$epid, ctry.data$afp.all.2$epid)] = missing_data2$dist
+ctry.data$afp.all.2$adm2guid[match(missing_data2$epid, ctry.data$afp.all.2$epid)] = missing_data2$adm2guid
 
 #!!! no NAs should be present anymore
 count(ctry.data$afp.all.2,dist)
@@ -546,11 +540,8 @@ poppy = poppy[,c(1,4,3,6,7,8,9,10,11,5,2)]
 # !!! Inserting Liz's code 1326-1785
 # LAB Data-----------------------------------------------------------------------------
 # # Read in and deal with lab data --------------
-# this is from WHO, afro.lab.01 is more recent, but doesn't have the same columns as laba
 laba <- read_excel(file.path(here(), "madagascar", year(Sys.Date()), "data", "polio_lab_2019_jan22_2024.xlsx"))
 # updated lab data
-afro.lab.01 <- sirfunctions::edav_io("read", file_loc = "Data/lab/2024-04-05 AFRO Lab Extract (AFP only).csv") %>%
-  filter(!is.na(EPID))
 laba <- laba |>
   filter(ctry.code2==ctry.data$ctry.code)
 #filtering out negative time intervals
@@ -1095,6 +1086,7 @@ timely_prov <- ggplot(prov.time.2|>
 
 timely_prov
 
+# Uncomment if ISS/eSURV data is available
 # # # Read in and deal with the ISS data ----
 # issy = read.csv("Current Sierra_Leone.csv")
 # # 
@@ -3359,10 +3351,13 @@ pot.c.clust = filter(cases.need60day, pot.compatible == 1|classification=="Compa
 pot.c.clust = arrange(pot.c.clust, date) # arrange by onset date
 pot.c.clust$clust = NA
 pot.c.clust$clust[1] = 1
-for(i in 2:nrow(pot.c.clust)){
-  pot.c.clust$clust[i] = ifelse(pot.c.clust$date[i]<=pot.c.clust$date[i-1]+30,
-                                max(pot.c.clust$clust, na.rm = T),
-                                max(pot.c.clust$clust, na.rm = T)+1)
+
+if (nrow(pot.c.clust) > 1) {
+  for(i in 2:nrow(pot.c.clust)){
+    pot.c.clust$clust[i] = if_else(pot.c.clust$date[i]<=pot.c.clust$date[i-1]+30,
+                                   max(pot.c.clust$clust[1:i-1], na.rm = T),
+                                   max(pot.c.clust$clust[1:i-1], na.rm = T)+1)
+  }
 }
 
 # Rolling cluster assignment
@@ -3385,7 +3380,7 @@ write_xlsx(pot.c.clust2,
 #----- Finishing Up
 # attaching laba2 without names of patients
 ctry.data$laba2 <- laba2 |> select(-NamesofPatient)
-local_dr_path <- file.path(getwd(), "somalia_04232024.R")
+local_dr_path <- file.path(local_dr_path, "somalia_04232024.R")
 github_path <- file.path("C:/Users/XRG9/desktop/gitrepos/sg-desk-reviews")
 # Upload backup of the DR data to EDAV
 freeze_dr_data(ctry.data, str_to_lower(country), 2024, "somalia_04232024")
