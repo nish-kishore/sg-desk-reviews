@@ -54,9 +54,10 @@ polis_date <- floor_date(Sys.Date(), "week", 1) # Date that data was pulled from
 local_dr_path <- "C:/Users/XRG9/Desktop/local_dr"
 
 # get country data
-prev_get_all_polio_data <- read_rds(file.path(local_dr_path, str_to_lower(country), 
-                                              year(Sys.Date()), "data", "raw.data.rds"))
-ctry.data <- sirfunctions::extract_country_data(country, prev_get_all_polio_data)
+ctry.data <- read_rds(file.path(local_dr_path, str_to_lower(country), 
+                                year(Sys.Date()), 
+                                "data", "somalia_04232024.rds"))
+
 
 # convert date columns from char to date-time and add necessary columns
 ctry.data$afp.all.2 <-ctry.data$afp.all.2 |>
@@ -3378,11 +3379,7 @@ write_xlsx(pot.c.clust2,
                      country, ".xlsx")))
 
 #----- Finishing Up
-# attaching laba2 without names of patients
-ctry.data$laba2 <- laba2 |> select(-NamesofPatient)
 local_dr_path <- file.path(local_dr_path, "somalia_04232024.R")
 github_path <- file.path("C:/Users/XRG9/desktop/gitrepos/sg-desk-reviews")
-# Upload backup of the DR data to EDAV
-freeze_dr_data(ctry.data, str_to_lower(country), 2024, "somalia_04232024")
 # saving new changes to the code
 upload_dr_to_github(local_dr_path, github_path)
