@@ -12,8 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Initial Set Up
 
 1.  **Load the following packages**.
-
+For experimental versions of the desk review code, please use the sub branch called `59-dr-modularization-data-loading`.
 ```{r packages}
+repo <- "nish-kishore/sirfunctions"
+ref <- "59-dr-modularization-data-loading"
+remotes::install_github(repo, ref)
 library(sirfunctions)
 library(tidyverse)
 ```
@@ -31,17 +34,15 @@ library(tidyverse)
 2.  **Set the desk review parameters**. `local_dr_path` is the folder where you would like to store desk reviews and associated files locally. The `sg_dr_path` is the folder containing the clone of the `sg-desk-reviews` GitHub repository. This must point to a valid git repository. If lab or ISS/eSurv data are unavailable, please assign the path values to `NULL`.
 
 ```{r parameters}
-country_name <- "guinea-bissau"
+country_name <- ""
 
-local_dr_path <- file.path("../../local_dr_test")
+local_dr_path <- file.path("")
 
 sg_dr_path <- NULL
 
 iss_data_path <- NULL
 
 lab_data_path <- NULL
-
-attach_spatial_data <- T
 
 ```
 
@@ -55,20 +56,33 @@ attach_spatial_data <- T
 
 
 
-3.  **Initialize the desk review**. By default, the start date of the desk review is 3 years from the end date on January 1st. The end date is 6 weeks from today. You may modify the default start and end dates.
+3.  **Initialize the desk review**. By default, the start date of the desk review is 3 years from the end date on January 1st. The end date is 6 weeks from today. You may modify the default start and end dates. For ES data, the start date is one year from the end date. 
 
 ```{r init}
 ctry.data <- init_dr(country_name, 
-                     local_dr_folder = local_dr_path, 
-                     attach_spatial_data = attach_spatial_data,
+                     local_dr_folder = local_dr_path,
                      branch = "59-dr-modularization-data-loading")
+```
 
-# Uncomment if you can access the folder directly from EDAV to get the lab data
-# will also need lab.locs for the cleaning step
-ctry.data$lab.data <- sirfunctions::edav_io("read", 
-                                            file_loc = "Data/lab/2024-04-05 EMRO Lab Extract (AFP only).csv") |> filter(!is.na(EPID))
-lab.locs <- lab.locs <- sirfunctions::edav_io("read", file_loc = "Data/lab/Routine_lab_testing_locations.csv")
 
+
+
+
+
+
+
+
+
+
+4. **(Optional) Attaching lab data from EDAV.** If lab data is not saved locally, then you may access lab data from EDAV. There are two datasets: EMRO and AFRO. The `get_region()` function will handle the selection of region. If the country is outside of the region, then an error will be raised.
+
+```{r edav.lab}
+afro_lab <- "Data/lab/2024-04-05 AFRO Lab Extract (AFP only).csv"
+emro_lab <- "Data/lab/2024-04-05 EMRO Lab Extract (AFP only).csv"
+region <- get_region()
+lab_choice <- if_else(region == "EMRO", emro_lab, afro_lab)
+ctry.data$lab.data <- sirfunctions::edav_io("read", file_loc = lab_choice) |> 
+  filter(!is.na(EPID))
 ```
 
 
@@ -83,12 +97,11 @@ lab.locs <- lab.locs <- sirfunctions::edav_io("read", file_loc = "Data/lab/Routi
 
 ## Data Cleaning
 
-1.  **Check for errors**. Run the following checks, if applicable. Error logs will be exported to the `errors` folder. Use `lab_data_errors_who` if the lab data came from WHO. Use `lab_data_errors_regional` if the lab data came from the regional office.
+1.  **Check for errors**. Run the following checks, if applicable. Error logs will be exported to the `errors` folder.
 
 ```{r check.errors}
 ctry_data_errors(ctry.data)
-lab_data_errors_who(ctry.data)
-# lab_data_errors_regional function not yet complete
+lab_data_errors(ctry.data)
 # ISS data checking function not yet complete
 ```
 
@@ -102,15 +115,14 @@ lab_data_errors_who(ctry.data)
 
 
 
-2.  **Perform Data Cleaning**.
+2.  **Perform Data Cleaning**. The following will attempt to clean data issues flagged during the error checking process. There are instances where data cleaning, in particular with the lab and ISS data, can fail. This can occur during the imputation of missing data (year, province, district, etc...), which depend on EPIDs. For example, EPIDs from EMRO are separated by `/`, which means that it may be useful to set `delim='\'` in `clean_lab_data()`. 
+
+For ISS/eSURV data, it is advisable to take a look at the data before cleaning, and ensure the default parameters for `clean_iss_data()` are correct.
 
 ```{r data.cleaning}
 ctry.data <- clean_ctry_data(ctry.data)
-ctry.data$lab.data <- clean_lab_data_regional(ctry.data, region="EMRO", 
-                                              lab.locs = lab.locs, 
-                                              start_date, end_date, 
-                                              delim = "/")
-ctry.data$iss.data <- clean_iss_data(ctry.data$iss)
+ctry.data$lab.data <- clean_lab_data(ctry.data)
+ctry.data$iss.data <- clean_iss_data(ctry.data)
 ```
 
 
@@ -135,8 +147,17 @@ afp.by.month.dist <- generate_afp_by_month_summary(afp.by.month, ctry.data, star
 afp.case <- generate_afp_by_month_summary(afp.by.month, ctry.data, start_date, end_date, "year")
 ```
 
-#### Calculating NPAFP Rates
 
+
+
+
+
+
+
+
+
+#### Calculating NPAFP Rates
+These calculate the NPAFP rates at each geographic level. `sp_continuity_validation` is a parameter to indicate whether GUIDs that are not present across the start and end dates should be dropped.
 ```{r npafp.rates}
 dis.extract <- f.npafp.rate.01(
   afp.data = ctry.data$afp.all.2,
@@ -286,7 +307,7 @@ dist.shape <- set_shapefiles(ctry.data, "dist")
 
 
 #### Generating tables necessary for analysis
-
+If lab timeliness intervals from the lab data are available, uncomment `lab.timeliness.ctry` and `lab.timeliness.prov`. Otherwise, timeliness intervals are purely calculated from the AFP linelist. The main advantage of attaching lab data is to include the interval between the lab receiving the stool sample to final culture results.
 ```{r generate.tables}
 stool.data <- generate_stool_data(ctry.data$afp.all.2, start_date, end_date)
 int.data.ctry <- generate_int_data(ctry.data, start_date, end_date, 
