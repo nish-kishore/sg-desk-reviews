@@ -19,6 +19,7 @@ ref <- "59-dr-modularization-data-loading"
 remotes::install_github(repo, ref)
 library(sirfunctions)
 library(tidyverse)
+library(sf)
 ```
 
 
@@ -35,13 +36,9 @@ library(tidyverse)
 
 ```{r parameters}
 country_name <- ""
-
 local_dr_path <- file.path("")
-
 sg_dr_path <- NULL
-
 iss_data_path <- NULL
-
 lab_data_path <- NULL
 
 ```
@@ -61,6 +58,9 @@ lab_data_path <- NULL
 ```{r init}
 ctry.data <- init_dr(country_name, 
                      local_dr_folder = local_dr_path,
+                     sg_dr_folder = sg_dr_path,
+                     lab_data_path = lab_data_path,
+                     iss_data_path = iss_data_path,
                      branch = "59-dr-modularization-data-loading")
 ```
 
@@ -115,7 +115,7 @@ lab_data_errors(ctry.data)
 
 
 
-2.  **Perform Data Cleaning**. The following will attempt to clean data issues flagged during the error checking process. There are instances where data cleaning, in particular with the lab and ISS data, can fail. This can occur during the imputation of missing data (year, province, district, etc...), which depend on EPIDs. For example, EPIDs from EMRO are separated by `/`, which means that it may be useful to set `delim='\'` in `clean_lab_data()`. 
+2.  **Perform Data Cleaning**. The following will attempt to clean data issues flagged during the error checking process. There are instances where data cleaning, in particular with the lab and ISS data, can fail. This can occur during the imputation of missing data (year, province, district, etc...), which depend on EPIDs. For example, EPIDs from EMRO are separated by `/`, which means that it may be useful to set `delim='/'` in `clean_lab_data()`. 
 
 For ISS/eSURV data, it is advisable to take a look at the data before cleaning, and ensure the default parameters for `clean_iss_data()` are correct.
 
@@ -226,8 +226,8 @@ ctry.case.ind <- prep_npafp_table(ctry.extract, ctry.data$afp.all.2, start_date,
 #### Generate lab timeliness
 
 ```{r lab.timeliness}
-lab.timeliness.ctry <- generate_lab_timeliness(lab.data, "ctry", start_date, end_date)
-lab.timeliness.prov <- generate_lab_timeliness(lab.data, "prov", start_date, end_date)
+lab.timeliness.ctry <- generate_lab_timeliness(ctry.data$lab.data, "ctry", start_date, end_date)
+lab.timeliness.prov <- generate_lab_timeliness(ctry.data$lab.data, "prov", start_date, end_date)
 ```
 
 
