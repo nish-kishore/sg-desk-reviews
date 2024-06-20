@@ -53,7 +53,11 @@ lab_data_path <- NULL
 
 
 
-3.  **Initialize the desk review**. By default, the start date of the desk review is 3 years from the end date on January 1st. The end date is 6 weeks from today. You may modify the default start and end dates. For ES data, the start date is one year from the end date. 
+3.  **Initialize the desk review**. By default, the start date of the desk review is 3 years from the end date on January 1st. The end date is 6 weeks from today. You may modify the default start and end dates. For ES data, the start date is one year from the end date. Within the `param` folder, there will be a parameters file that is created when `init_dr()` is first run. This file saves the start date and end date of the desk review, to ensure consistency in analyzing data across multiple days. You will have the option to modify this parameter file in subsequent runs of `init_dr()`. 
+
+The `branch` parameter allows the flexibility of downloading a specific version of a desk review function. This is useful if a specific branch has a bug fix for a function, or a new function that has not yet been merged to the main package.
+
+The parameter `source = T` will download the desk review functions from `sirfunctions` to the `R` folder in the desk review folder and gets sourced locally. This allows the user to easily modify the various desk review functions. To view the source code of a function, simply use `View()` (ex. `View(clean_ctry_data)`).
 
 ```{r init}
 ctry.data <- init_dr(country_name, 
@@ -61,7 +65,8 @@ ctry.data <- init_dr(country_name,
                      sg_dr_folder = sg_dr_path,
                      lab_data_path = lab_data_path,
                      iss_data_path = iss_data_path,
-                     branch = "59-dr-modularization-data-loading")
+                     branch = "59-dr-modularization-data-loading",
+                     source = T)
 ```
 
 
@@ -224,6 +229,7 @@ ctry.case.ind <- prep_npafp_table(ctry.extract, ctry.data$afp.all.2, start_date,
 
 
 #### Generate lab timeliness
+If lab timeliness intervals from the lab data are available, uncomment `lab.timeliness.ctry` and `lab.timeliness.prov`. Otherwise, timeliness intervals are purely calculated from the AFP linelist. The main advantage of attaching lab data is to include the interval between the lab receiving the stool sample to final culture results.
 
 ```{r lab.timeliness}
 lab.timeliness.ctry <- generate_lab_timeliness(ctry.data$lab.data, "ctry", start_date, end_date)
@@ -241,7 +247,7 @@ lab.timeliness.prov <- generate_lab_timeliness(ctry.data$lab.data, "prov", start
 
 
 #### Generate Stool Adequacy Summary Tables
-
+These calculate the stool adequacy rates at each geographic level. `sp_continuity_validation` is a parameter to indicate whether GUIDs that are not present across the start and end dates should be dropped.
 ```{r stool.adequacy}
 dstool <- f.stool.ad.01(
   afp.data = ctry.data$afp.all.2,
@@ -375,7 +381,7 @@ surv.ind.tab <- generate_surv_ind_tab(ctry.data, dis.extract, cstool, dstool, af
 pop.tab <- generate_pop_tab(prov.case.ind, pstool, start_date, end_date) 
 inad.tab.flex <- generate_inad_tab(ctry.data, stool.data, cstool, start_date, end_date) 
 tab.60d <- generate_60_day_tab(cases.need60day)
-es.table <- generate_es_tab(ctry.data$es, es_start_date, es_end_date) 
+es.table <- generate_es_tab(ctry.data$es) 
 ```
 
 
@@ -411,7 +417,49 @@ create_pot_comp_clust_export(pot.c.clust)
 
 
 ## Generating PowerPoint Presentation
-
+Please download the PowerPoint presentation from GitHub [here](https://github.com/nish-kishore/sg-desk-reviews/blob/main/resources/desk_review_template.pptx) and place it to the folder containing the local desk reviews. You will need to modify `ppt_template_path` as necessary.
 ```{r powerpoint}
-generate_dr_ppt2(ctry.data, start_date, end_date, surv.ind.tab, inad.tab.flex, tab.60d, es.table)
+ppt_template <- NULL
+generate_dr_ppt2(ctry.data, start_date, end_date, 
+                 surv.ind.tab, inad.tab.flex, tab.60d, es.table, 
+                 ppt_template_path = ppt_template)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+## Helpful Information
+
+1.  When running `generate_es_site_det()`, it may produce a warning related to a missing vaccine or detection type. In those instances, you may need to pass a named list that includes the additional vaccine/detection type with the desired color schemes to the `vaccine_type` and `detection_type` parameters of `generate_es_site_det()`. The defaults are listed below. Please modify as necessary.
+
+```{r default.es.site.det.colors}
+default_vaccine_type <- c(
+    "nOPV2" = "blue",
+    "bOPV" = "coral1",
+    "mOPV2" = "purple")
+
+default_detections <- c(
+    "No EV isolated" = "#f2f2f2",
+    "NPEV only" = "darkgrey",
+    "VDPV2" = "darkred",
+    "Sabin 1" = scales::brewer_pal(palette = "Set1")(9)[1],
+    "Sabin 2" = scales::brewer_pal(palette = "Set1")(9)[8],
+    "Sabin 1/Sabin 3" = scales::brewer_pal(palette = "Set1")(9)[2],
+    "Sabin 3" = scales::brewer_pal(palette = "Set1")(9)[3],
+    "Sabin 1/Sabin 3/VDPV2" = scales::brewer_pal(palette = "Set1")(9)[4],
+    "Sabin 1/VDPV2" = scales::brewer_pal(palette = "Set1")(9)[5],
+    "Sabin 3/VDPV2" = scales::brewer_pal(palette = "Set1")(9)[6],
+    "Sabin 1 or Sabin 3" = scales::brewer_pal(palette = "Set1")(9)[6],
+    "Sabin 1/3" = scales::brewer_pal(palette = "Set1")(9)[2],
+    "Sabin 1/3 and VDPV2"  = scales::brewer_pal(palette = "Set1")(9)[5]
+  )
+
 ```
