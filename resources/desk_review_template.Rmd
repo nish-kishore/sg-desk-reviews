@@ -107,7 +107,7 @@ ctry.data$lab.data <- sirfunctions::edav_io("read", file_loc = lab_choice) |>
 ```{r check.errors}
 ctry_data_errors(ctry.data)
 lab_data_errors(ctry.data)
-# ISS data checking function not yet complete
+iss_data_errors(ctry.data)
 ```
 
 
