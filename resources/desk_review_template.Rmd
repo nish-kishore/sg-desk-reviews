@@ -12,10 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Initial Set Up
 
 1.  **Load the following packages**.
-For experimental versions of the desk review code, please use the sub branch called `59-dr-modularization-data-loading`.
+For experimental versions of the desk review code, please use the sub branch called `dev`.
 ```{r packages}
 repo <- "nish-kishore/sirfunctions"
-ref <- "59-dr-modularization-data-loading"
+ref <- "dev"
 remotes::install_github(repo, ref)
 library(sirfunctions)
 library(tidyverse)
@@ -65,7 +65,7 @@ ctry.data <- init_dr(country_name,
                      sg_dr_folder = sg_dr_path,
                      lab_data_path = lab_data_path,
                      iss_data_path = iss_data_path,
-                     branch = "59-dr-modularization-data-loading",
+                     branch = "dev",
                      source = T)
 ```
 
