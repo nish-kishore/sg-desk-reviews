@@ -12,11 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Initial Set Up
 
 1.  **Load the following packages**.
-For experimental versions of the desk review code, please use the sub branch called `dev`.
+For experimental versions of the desk review code, please use the sub branch called `dev`. Otherwise, "main"
 ```{r packages}
 repo <- "nish-kishore/sirfunctions"
-ref <- "dev"
-remotes::install_github(repo, ref)
+ref <- "main" # alternatively use "dev"
+remotes::install_github(repo, ref) 
 library(sirfunctions)
 library(tidyverse)
 ```
