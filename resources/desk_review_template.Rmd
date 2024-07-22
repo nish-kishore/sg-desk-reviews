@@ -19,7 +19,6 @@ ref <- "dev"
 remotes::install_github(repo, ref)
 library(sirfunctions)
 library(tidyverse)
-library(sf)
 ```
 
 
@@ -65,7 +64,6 @@ ctry.data <- init_dr(country_name,
                      sg_dr_folder = sg_dr_path,
                      lab_data_path = lab_data_path,
                      iss_data_path = iss_data_path,
-                     branch = "dev",
                      source = T)
 ```
 
@@ -164,7 +162,7 @@ afp.case <- generate_afp_by_month_summary(afp.by.month, ctry.data, start_date, e
 #### Calculating NPAFP Rates
 These calculate the NPAFP rates at each geographic level. `sp_continuity_validation` is a parameter to indicate whether GUIDs that are not present across the start and end dates should be dropped.
 ```{r npafp.rates}
-dis.extract <- f.npafp.rate.01(
+dist.extract <- f.npafp.rate.01(
   afp.data = ctry.data$afp.all.2,
   pop.data = ctry.data$dist.pop,
   start.date = start_date,
@@ -212,7 +210,7 @@ ctry.extract <- f.npafp.rate.01(
 
 ```{r npafp.indicators}
 # Generate NPAFP Rate Indicators by Geographic Level
-dis.case.ind <- prep_npafp_table(dis.extract, ctry.data$afp.all.2, start_date, end_date, "dist")
+dist.case.ind <- prep_npafp_table(dist.extract, ctry.data$afp.all.2, start_date, end_date, "dist")
 prov.case.ind <- prep_npafp_table(prov.extract, ctry.data$afp.all.2, start_date, end_date, "prov")
 ctry.case.ind <- prep_npafp_table(ctry.extract, ctry.data$afp.all.2, start_date, end_date, "ctry")
 ```
@@ -346,7 +344,7 @@ pot.c.clust <- generate_potentially_compatibles_cluster(cases.need60day)
 generate_ctry_timeliness_graph(int.data.ctry)
 generate_prov_timeliness_graph(int.data.prov, afp.prov.year.lab)
 generate_pop_map(ctry.data, prov.shape, end_date)
-generate_dist_pop_map(ctry.data, prov.shape, dist.shape, end_date)
+generate_dist_pop_map(ctry.data, ctry.shape, prov.shape, dist.shape, end_date)
 generate_afp_case_map(ctry.data, ctry.shape, prov.shape, start_date) # this needs the spine treatment
 generate_afp_epicurve(ctry.data, start_date)
 generate_afp_prov_year(afp.by.month.prov, start_date, end_date)
@@ -354,7 +352,7 @@ generate_npafp_maps(prov.extract, ctry.shape, prov.shape, start_date, end_date)
 generate_npafp_maps_dist(dist.extract, ctry.shape, prov.shape, dist.shape, start_date, end_date)
 generate_stool_ad_maps(ctry.data, pstool, ctry.shape, prov.shape, start_date, end_date)
 generate_stool_ad_maps_dist(ctry.data, dstool, ctry.shape, prov.shape, dist.shape, start_date, end_date)
-generate_timeliness_maps(ctry.data, ctry.shape, prov.shape, start_date, end_date)
+generate_timeliness_maps(ctry.data, ctry.shape, prov.shape, start_date, end_date, mark_x = F)
 generate_es_site_det(ctry.data, es.data.long)
 generate_es_det_map(ctry.data$es, es.data.long, ctry.shape, prov.shape)
 generate_es_timely(ctry.data$es)
@@ -377,7 +375,7 @@ generate_iss_map(ctry.data$iss.data, prov.shape, start_date, end_date)
 ## Generate flextables
 
 ```{r flextables}
-surv.ind.tab <- generate_surv_ind_tab(ctry.data, dis.extract, cstool, dstool, afp.case)  
+surv.ind.tab <- generate_surv_ind_tab(ctry.data, ctry.extract, dist.extract, cstool, dstool, afp.case)  
 pop.tab <- generate_pop_tab(prov.case.ind, pstool, start_date, end_date) 
 inad.tab.flex <- generate_inad_tab(ctry.data, stool.data, cstool, start_date, end_date) 
 tab.60d <- generate_60_day_tab(cases.need60day)
