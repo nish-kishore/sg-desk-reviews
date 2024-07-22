@@ -398,7 +398,7 @@ es.table <- generate_es_tab(ctry.data$es)
 ```{r excel.outputs}
 create_afp_export(stool.data) 
 create_stool_adequacy_export(cstool, pstool, dstool) 
-create_npafp_export(ctry.case.ind, prov.case.ind, dis.case.ind) 
+create_npafp_export(ctry.case.ind, prov.case.ind, dist.case.ind) 
 create_pop_check_export(ctry.data) 
 create_60_day_export(cases.need60day) 
 create_pot_comp_clust_export(pot.c.clust)
