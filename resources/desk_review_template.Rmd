@@ -80,8 +80,8 @@ ctry.data <- init_dr(country_name,
 4. **(Optional) Attaching lab data from EDAV.** If lab data is not saved locally, then you may access lab data from EDAV. There are two datasets: EMRO and AFRO. The `get_region()` function will handle the selection of region. If the country is outside of the region, then an error will be raised.
 
 ```{r edav.lab}
-afro_lab <- "Data/lab/2024-04-05 AFRO Lab Extract (AFP only).csv"
-emro_lab <- "Data/lab/2024-04-05 EMRO Lab Extract (AFP only).csv"
+afro_lab <- "Data/lab/2024-09-20 AFRO Lab Extract (AFP only since 2022).csv"
+emro_lab <- "Data/lab/2024-09-20 EMRO Lab Extract (AFP only since 2022).csv"
 region <- get_region()
 lab_choice <- if_else(region == "EMRO", emro_lab, afro_lab)
 ctry.data$lab.data <- sirfunctions::edav_io("read", file_loc = lab_choice) |> 
@@ -313,7 +313,7 @@ dist.shape <- set_shapefiles(ctry.data, "dist")
 #### Generating tables necessary for analysis
 If lab timeliness intervals from the lab data are available, uncomment `lab.timeliness.ctry` and `lab.timeliness.prov`. Otherwise, timeliness intervals are purely calculated from the AFP linelist. The main advantage of attaching lab data is to include the interval between the lab receiving the stool sample to final culture results.
 ```{r generate.tables}
-stool.data <- generate_stool_data(ctry.data$afp.all.2, start_date, end_date)
+stool.data <- generate_stool_data(ctry.data$afp.all.2, "good", "inadequate", start_date, end_date)
 int.data.ctry <- generate_int_data(ctry.data, start_date, end_date, 
                                    spatial.scale = "ctry", 
                                    #lab.timeliness.ctry
@@ -323,6 +323,7 @@ int.data.prov <- generate_int_data(ctry.data, start_date, end_date, spatial.scal
                                    )
 cases.need60day <- generate_60_day_table_data(stool.data, start_date, end_date)
 es.data.long <- generate_es_data_long(ctry.data$es)
+afp.year.lab <- generate_year_lab(ctry.data, start_date, end_date)
 afp.prov.year.lab <- generate_prov_year_lab(ctry.data, start_date, end_date)
 pot.c.clust <- generate_potentially_compatibles_cluster(cases.need60day)
 ```
@@ -341,17 +342,17 @@ pot.c.clust <- generate_potentially_compatibles_cluster(cases.need60day)
 ## Figures
 
 ```{r figures}
-generate_ctry_timeliness_graph(int.data.ctry)
+generate_ctry_timeliness_graph(int.data.ctry, afp.year.lab)
 generate_prov_timeliness_graph(int.data.prov, afp.prov.year.lab)
 generate_pop_map(ctry.data, prov.shape, end_date)
 generate_dist_pop_map(ctry.data, ctry.shape, prov.shape, dist.shape, end_date)
 generate_afp_case_map(ctry.data, ctry.shape, prov.shape, start_date)
 generate_afp_epicurve(ctry.data, start_date)
 generate_afp_prov_year(afp.by.month.prov, start_date, end_date)
-generate_npafp_maps(prov.extract, ctry.shape, prov.shape, start_date, end_date)
-generate_npafp_maps_dist(dist.extract, ctry.shape, prov.shape, dist.shape, start_date, end_date)
-generate_stool_ad_maps(ctry.data, pstool, ctry.shape, prov.shape, start_date, end_date)
-generate_stool_ad_maps_dist(ctry.data, dstool, ctry.shape, prov.shape, dist.shape, start_date, end_date)
+generate_npafp_maps(prov.extract, ctry.shape, prov.shape, start_date, end_date, caption_size = 2.5)
+generate_npafp_maps_dist(dist.extract, ctry.shape, prov.shape, dist.shape, start_date, end_date, caption_size = 2.5)
+generate_stool_ad_maps(ctry.data, pstool, ctry.shape, prov.shape, start_date, end_date, caption_size = 2.5)
+generate_stool_ad_maps_dist(ctry.data, dstool, ctry.shape, prov.shape, dist.shape, start_date, end_date, caption_size = 2.5)
 generate_timeliness_maps(ctry.data, ctry.shape, prov.shape, start_date, end_date, mark_x = F)
 generate_es_site_det(ctry.data, es.data.long)
 generate_es_det_map(ctry.data$es, es.data.long, ctry.shape, prov.shape)
@@ -459,5 +460,85 @@ default_detections <- c(
     "Sabin 1/3" = scales::brewer_pal(palette = "Set1")(9)[2],
     "Sabin 1/3 and VDPV2"  = scales::brewer_pal(palette = "Set1")(9)[5]
   )
+
+```
+
+Gender Code provided by Scarlett
+```{r gender}
+afp.data <- (ctry.data$afp.all.2)
+
+afp.data <- afp.data %>%
+  filter(cdc.classification.all2 == "NPAFP") %>%
+  mutate(year = format(as.Date(investigation.date, format = "%Y-%m-%d"), "%Y")) %>%
+  filter(year %in% c("2021", "2022", "2023", "2024"))
+
+
+sex_percentages <- afp.data %>%
+  mutate(sex = ifelse(is.na(sex), "Unknown", sex)) %>%
+  group_by(year, sex) %>% 
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(year) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+total_counts <- sex_percentages %>%
+  group_by(year) %>%
+  summarise(total_count = sum(count), .groups = 'drop')
+
+# Combine the total_counts with sex_percentages for easier plotting
+combined_data <- sex_percentages %>%
+  left_join(total_counts, by = "year")
+
+# Create the stacked bar plot with percentage and count labels
+ggplot(combined_data, aes(x = year, y = percentage, fill = sex)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = count), 
+            position = position_stack(vjust = 0.5),  # Center labels in each stacked section
+            color = "black", size = 3) +
+  geom_text(aes(y = 100, label = paste("n =", total_count)), 
+            vjust = -0.5, color = "black", size = 3) +  # Place total count label above the bars
+  labs(title = "NP-AFP Case Sex Distribution by Year",
+       x = "",
+       y = "Percentage") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Male" = "#003f5a", "Female" = "#de6600", "Unknown" = "lightgrey")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+#median onset to notification by sex
+ontonot_medians <- afp.data %>%
+  mutate(sex = ifelse(is.na(sex), "Unknown", sex)) %>%
+  filter(!is.na(ontonot)) %>%
+  group_by(year, sex) %>%
+  summarise(median_ontonot = median(ontonot), .groups = 'drop')
+
+ggplot(ontonot_medians, aes(x = year, y = median_ontonot, fill = sex, label = round(median_ontonot, 1))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(y = median_ontonot + max(ontonot_medians$median_ontonot, na.rm = TRUE) * 0.02), 
+            position = position_dodge(width = 0.9),  # Apply the same dodging to labels
+            color = "black", size = 3, vjust = -0.5) +
+  labs(title = "",
+       x = "",
+       y = "Median Onset to Notification") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Male" = "#003f5a", "Female" = "#de6600", "Unknown" = "lightgrey")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+#median onset to stool 1 by sex
+
+ontostool_medians <- afp.data %>%
+  mutate(sex = ifelse(is.na(sex), "Unknown", sex)) %>%
+  filter(!is.na(ontostool1)) %>%
+  group_by(year, sex) %>%
+  summarise(median_ontostool = median(ontostool1), .groups = 'drop')
+
+ggplot(ontostool_medians, aes(x = year, y = median_ontostool, fill = sex, label = round(median_ontostool, 1))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(y = median_ontostool + max(ontostool_medians$median_ontostool, na.rm = TRUE) * 0.01), 
+            position = position_dodge(width = 0.9),  # Apply the same dodging to labels
+            color = "black", size = 3, vjust = -0.5) +
+  labs(title = "",
+       x = "Year",
+       y = "Median Onset to Stool 1 Collection") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Male" = "#003f5a", "Female" = "#de6600", "Unknown" = "lightgrey")) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
 
 ```
