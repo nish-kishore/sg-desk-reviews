@@ -64,6 +64,7 @@ ctry.data <- init_dr(country_name,
                      sg_dr_folder = sg_dr_path,
                      lab_data_path = lab_data_path,
                      iss_data_path = iss_data_path,
+                     branch = ref,
                      source = T)
 ```
 
