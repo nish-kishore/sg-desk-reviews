@@ -293,12 +293,18 @@ cstool <- f.stool.ad.01(
 
 
 
-#### Set shapefiles to be most recent GUIDs
+#### Set shapefiles
 
 ```{r set.recent.shape}
-ctry.shape <- set_shapefiles(ctry.data, "ctry")
-prov.shape <- set_shapefiles(ctry.data, "prov")
-dist.shape <- set_shapefiles(ctry.data, "dist")
+ctry.shape <- load_clean_ctry_sp(ctry_name = Sys.getenv("DR_COUNTRY"), 
+                                 type = "long"
+                                 )
+prov.shape <- load_clean_prov_sp(ctry_name = Sys.getenv("DR_COUNTRY"), 
+                                 type = "long"
+                                 )
+dist.shape <- load_clean_dist_sp(ctry_name = Sys.getenv("DR_COUNTRY"), 
+                                 type = "long"
+                                 )
 ```
 
 
@@ -314,7 +320,7 @@ dist.shape <- set_shapefiles(ctry.data, "dist")
 #### Generating tables necessary for analysis
 If lab timeliness intervals from the lab data are available, uncomment `lab.timeliness.ctry` and `lab.timeliness.prov`. Otherwise, timeliness intervals are purely calculated from the AFP linelist. The main advantage of attaching lab data is to include the interval between the lab receiving the stool sample to final culture results.
 ```{r generate.tables}
-stool.data <- generate_stool_data(ctry.data$afp.all.2, "good", "inadequate", start_date, end_date)
+stool.data <- generate_stool_data(ctry.data$afp.all.2, start_date, end_date)
 int.data.ctry <- generate_int_data(ctry.data, start_date, end_date, 
                                    spatial.scale = "ctry", 
                                    #lab.timeliness.ctry
@@ -379,7 +385,7 @@ generate_iss_map(ctry.data$iss.data, prov.shape, start_date, end_date)
 ```{r flextables}
 surv.ind.tab <- generate_surv_ind_tab(ctry.data, ctry.extract, dist.extract, cstool, dstool, afp.case)  
 pop.tab <- generate_pop_tab(prov.case.ind, pstool, start_date, end_date) 
-inad.tab.flex <- generate_inad_tab(ctry.data, stool.data, cstool, start_date, end_date) 
+inad.tab.flex <- generate_inad_tab(ctry.data, cstool, start_date, end_date) 
 tab.60d <- generate_60_day_tab(cases.need60day)
 es.table <- generate_es_tab(ctry.data$es) 
 ```
@@ -421,7 +427,7 @@ Please download the PowerPoint presentation from GitHub [here](https://github.co
 ```{r powerpoint}
 ppt_template <- NULL
 generate_dr_ppt2(ctry.data, start_date, end_date, 
-                 surv.ind.tab, inad.tab.flex, tab.60d, es.table, 
+                 surv.ind.tab, inad.tab.flex, tab.60d, pop.tab, es.table, 
                  ppt_template_path = ppt_template)
 ```
 
